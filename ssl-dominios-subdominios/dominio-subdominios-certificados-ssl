@@ -1,3 +1,7 @@
+
+
+# 1. Para crear el subdominio lead.jumpjibe.com que apunte a tu segunda instancia de Odoo (puertos 28069 y 28072), debes agregar un nuevo bloque server en ## Nginx. Aquí está la configuración:
+```bash
 # Upstream principal Odoo
 upstream odoo {
     server 127.0.0.1:18069;
@@ -80,12 +84,30 @@ server {
     }
 }
 
+```
+
+# ####################################################################
+# Nueva configuración para el subdominio lead.jumpjibe.com
+# Nuevos upstreams para el subdominio leads
+```bash
+
 # SUBDOMINIO LEAD - CONFIGURACIÓN CORREGIDA
 server {
     listen 80;
     server_name lead.jumpjibe.com;
     return 301 https://lead.jumpjibe.com$request_uri;
 }
+
+```
+
+
+# Certificado SSL:
+# Si el certificado actual no incluye el subdominio, genera uno nuevo con:
+```bash
+sudo certbot certonly --agree-tos --email lead@jumpjibe.com --webroot -w /var/lib/letsencrypt/ -d lead.jumpjibe.com
+```
+# 3 Colocar el 443 con su certificado 
+```bash
 
 server {
     listen 443 ssl http2;
@@ -148,70 +170,64 @@ server {
     }
 }
 
-# Configuración n8n (existente)...
+```
 
-# ======================
-# n8n - CONFIGURACIÓN MEJORADA
-# ======================
-upstream n8n {
-    server 127.0.0.1:5678;
-    keepalive 32;
-}
+# Verificar certificados
+```bash
+sudo certbot certificates
 
-server {
-    listen 80;
-    server_name n8n.jumpjibe.com;
-    include snippets/letsencrypt.conf;
-    return 301 https://$server_name$request_uri;
-}
+```
+# 1. Ver fecha de expiración del certificado:
+```bash
+# Ver todos los certificados y sus fechas
+sudo certbot certificates
 
-server {
-    listen 443 ssl http2;
-    server_name n8n.jumpjibe.com;
+# Ver específicamente el certificado de lead.jumpjibe.com
+sudo certbot certificates | grep -A 10 "lead.jumpjibe.com"
 
-    ssl_certificate /etc/letsencrypt/live/n8n.jumpjibe.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/n8n.jumpjibe.com/privkey.pem;
-    ssl_trusted_certificate /etc/letsencrypt/live/n8n.jumpjibe.com/chain.pem;
-    include snippets/ssl.conf;
-    include snippets/letsencrypt.conf;
+# O usar openssl para ver detalles
+sudo openssl x509 -in /etc/letsencrypt/live/lead.jumpjibe.com/cert.pem -noout -dates
+```
+# 2. Renovar el certificado:
+```bash
+# Renovar solo este certificado
+sudo certbot renew --cert-name lead.jumpjibe.com
 
-    access_log /var/log/nginx/n8n.access.log;
-    error_log /var/log/nginx/n8n.error.log;
+# O renovar todos los certificados que estén próximos a expirar
+```bash
+# Renovar solo este certificado
+sudo certbot renew --cert-name lead.jumpjibe.com
 
-    # Cabeceras proxy
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Forwarded-Host $host;
+# O renovar todos los certificados que estén próximos a expirar
+sudo certbot renew
+# Forzar renovación (incluso si no está próximo a expirar):
+sudo certbot renew --cert-name lead.jumpjibe.com --force-renewal
+```
 
-    # Timeouts
-    proxy_read_timeout 720s;
-    proxy_connect_timeout 720s;
-    proxy_send_timeout 720s;
+# 3. Verificar renovación:
+```bash
+# Verificar que se renovó correctamente
+sudo certbot certificates | grep -A 5 "lead.jumpjibe.com"
 
-    # Configuración específica para WebSockets (n8n usa WebSockets para tiempo real)
-    location / {
-        proxy_pass http://n8n;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_redirect off;
-    }
+# Ver la nueva fecha de expiración
+sudo openssl x509 -in /etc/letsencrypt/live/lead.jumpjibe.com/cert.pem -noout -enddate
+```
+# 4. Renovación automática:
+```bash
+# Verificar el servicio de renovación automática
+sudo systemctl status certbot.timer
 
-    # Configuración para archivos estáticos (si los hay)
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        proxy_pass http://n8n;
-        proxy_cache_valid 200 90m;
-        proxy_buffering on;
-        expires 10d;
-        add_header Cache-Control "public";
-    }
+# Ver cuándo se ejecutará la próxima renovación automática
+sudo systemctl list-timers | grep certbot
 
-    gzip on;
-    gzip_types text/css text/less text/plain text/xml application/xml application/json application/javascript;
-    gzip_vary on;
-    gzip_min_length 1024;
-}
+# Ejecutar una prueba de renovación (sin guardar)
+sudo certbot renew --dry-run
+```
+# 5. Recargar Nginx después de renovar:
+```bash
+# Si usas --renew-hook o quieres recargar manualmente
+sudo systemctl reload nginx
+
+# Verificar que Nginx use el nuevo certificado
+sudo nginx -t
+```
