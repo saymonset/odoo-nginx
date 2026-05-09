@@ -1,0 +1,303 @@
+# Upstream principal Odoo demo
+upstream odoo_demo {
+    server 127.0.0.1:18069;
+}
+
+upstream odoo_demo_longpolling {
+    server 127.0.0.1:8072;
+}
+
+# Upstream para lead demo
+upstream lead_demo {
+    server 127.0.0.1:28069;
+}
+
+upstream lead_demo_longpolling {
+    server 127.0.0.1:28072;
+}
+
+upstream pgadmin_demo {
+    server 127.0.0.1:8080;
+}
+
+upstream chatwoot_demo {
+    server 127.0.0.1:3000;
+}
+
+upstream n8n_demo {
+    server 127.0.0.1:5678;
+    keepalive 32;
+}
+
+upstream postiz_demo {
+    server 127.0.0.1:4007;
+}
+
+upstream temporal_demo {
+    server 127.0.0.1:8180;
+}
+
+upstream integraiadev_demo {
+    server 127.0.0.1:38069;
+}
+
+upstream integraiadev_demo_longpolling {
+    server 127.0.0.1:38072;
+}
+
+# ============================================
+# SUBDOMINIO postiz.demo.integraia.lat
+# ============================================
+server {
+    listen 80;
+    server_name postiz.demo.integraia.lat;
+
+    location / {
+        proxy_pass http://postiz_demo;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+}
+
+# ============================================
+# SUBDOMINIO temporal.demo.integraia.lat
+# ============================================
+server {
+    listen 80;
+    server_name temporal.demo.integraia.lat;
+
+    location / {
+        proxy_pass http://temporal_demo;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+}
+
+# ============================================
+# SUBDOMINIO integraiadev.demo.integraia.lat
+# ============================================
+# server {
+#     listen 80;
+#     server_name integraiadev.demo.integraia.lat;
+
+#     location / {
+#         proxy_pass http://integraiadev_demo;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_redirect off;
+#     }
+
+#     location /websocket {
+#         proxy_pass http://integraiadev_demo_longpolling;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection "upgrade";
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_read_timeout 86400s;
+#     }
+
+#     location /longpolling/ {
+#         proxy_pass http://integraiadev_demo_longpolling;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection "upgrade";
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_read_timeout 900s;
+#     }
+# }
+
+# ============================================
+# SUBDOMINIO chatwoot.demo.integraia.lat
+# ============================================
+server {
+    listen 80;
+    server_name chatwoot.demo.integraia.lat;
+
+    location /rails/active_storage/ {
+        proxy_pass http://chatwoot_demo;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Ssl on;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
+    location /cable {
+        proxy_pass http://chatwoot_demo;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400s;
+    }
+
+    location / {
+        proxy_pass http://chatwoot_demo;
+        proxy_redirect off;
+    }
+}
+
+# ============================================
+# SUBDOMINIO pgadmin.demo.integraia.lat
+# ============================================
+server {
+    listen 80;
+    server_name pgadmin.demo.integraia.lat;
+
+    location / {
+        proxy_pass http://pgadmin_demo;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+}
+
+# ============================================
+# DOMINIO PRINCIPAL demo.integraia.lat (Odoo principal)
+# ============================================
+server {
+    listen 80;
+    server_name demo.integraia.lat;
+
+    location ~ \.css$ {
+        proxy_pass http://odoo_demo;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header Content-Type "text/css" always;
+    }
+
+    location ~* /web/static/ {
+        proxy_pass http://odoo_demo;
+        proxy_cache_valid 200 90m;
+        proxy_buffering on;
+        expires 864000;
+        add_header Cache-Control "public, immutable";
+
+        location ~ \.css$ {
+            add_header Content-Type "text/css" always;
+        }
+    }
+
+    location / {
+        proxy_pass http://odoo_demo;
+        proxy_redirect off;
+    }
+
+    location /longpolling/ {
+        proxy_pass http://odoo_demo_longpolling;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 900s;
+    }
+}
+
+# ============================================
+# SUBDOMINIO lead.demo.integraia.lat
+# ============================================
+# server {
+#     listen 80;
+#     server_name lead.demo.integraia.lat;
+
+#     location ~ \.css$ {
+#         proxy_pass http://lead_demo;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         add_header Content-Type "text/css" always;
+#     }
+
+#     location ~* /web/static/ {
+#         proxy_pass http://lead_demo;
+#         proxy_cache_valid 200 90m;
+#         proxy_buffering on;
+#         expires 864000;
+#         add_header Cache-Control "public, immutable";
+
+#         location ~ \.css$ {
+#             add_header Content-Type "text/css" always;
+#         }
+#     }
+
+#     location / {
+#         proxy_pass http://lead_demo;
+#         proxy_redirect off;
+#     }
+
+#     location /longpolling/ {
+#         proxy_pass http://lead_demo_longpolling;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection "upgrade";
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_read_timeout 900s;
+#     }
+# }
+
+# ============================================
+# n8n.demo.integraia.lat
+# ============================================
+server {
+    listen 80;
+    server_name n8n.demo.integraia.lat;
+
+    location / {
+        proxy_pass http://n8n_demo;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        proxy_pass http://n8n_demo;
+        proxy_cache_valid 200 90m;
+        proxy_buffering on;
+        expires 10d;
+        add_header Cache-Control "public";
+    }
+
+    gzip on;
+    gzip_types text/css text/less text/plain text/xml application/xml application/json application/javascript;
+    gzip_vary on;
+    gzip_min_length 1024;
+}
